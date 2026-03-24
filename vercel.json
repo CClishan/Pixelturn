@@ -1,0 +1,8 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "functions": {
+    "index.py": {
+      "excludeFiles": "{.venv/**,__pycache__/**,image-converter-pro/**,modern_batch_image_converter_dark_mode.png}"
+    }
+  }
+}
