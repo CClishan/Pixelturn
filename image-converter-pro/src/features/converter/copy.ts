@@ -11,6 +11,8 @@ export interface ConverterCopy {
   qualityLabel: string;
   uploadStrategyLabel: string;
   uploadStrategyDescription: string;
+  autoCompressLabel: string;
+  autoCompressDescription: (limit: string) => string;
   convertNow: string;
   processing: string;
   downloadZip: string;
@@ -48,6 +50,10 @@ export interface ConverterCopy {
     english: string;
     chinese: string;
   };
+  shared: {
+    on: string;
+    off: string;
+  };
 }
 
 export const converterCopy: Record<Language, ConverterCopy> = {
@@ -61,6 +67,9 @@ export const converterCopy: Record<Language, ConverterCopy> = {
     uploadStrategyLabel: 'Upload Strategy',
     uploadStrategyDescription:
       'Files convert one by one, stay in the queue after completion, and can be downloaded individually or as a ZIP when you are ready.',
+    autoCompressLabel: 'Oversize Uploads',
+    autoCompressDescription: (limit) =>
+      `Optionally recompress images in the browser before upload so oversized files can try to fit within the ${limit} single-image cap.`,
     convertNow: 'Convert Now',
     processing: 'Processing',
     downloadZip: 'Download ZIP',
@@ -101,6 +110,10 @@ export const converterCopy: Record<Language, ConverterCopy> = {
       english: 'EN',
       chinese: '中文',
     },
+    shared: {
+      on: 'On',
+      off: 'Off',
+    },
   },
   zh: {
     appTitle: '转换器',
@@ -111,6 +124,9 @@ export const converterCopy: Record<Language, ConverterCopy> = {
     qualityLabel: '质量',
     uploadStrategyLabel: '上传策略',
     uploadStrategyDescription: '文件会逐个转换，完成后保留在队列中，你可以按需单独下载或打包下载。',
+    autoCompressLabel: '超限图片处理',
+    autoCompressDescription: (limit) =>
+      `可选在浏览器上传前重新压缩超限图片，尽量让文件符合当前 ${limit} 的单图限制。`,
     convertNow: '立即转换',
     processing: '处理中',
     downloadZip: '打包下载',
@@ -149,6 +165,10 @@ export const converterCopy: Record<Language, ConverterCopy> = {
       label: '语言',
       english: 'EN',
       chinese: '中文',
+    },
+    shared: {
+      on: '开',
+      off: '关',
     },
   },
 };

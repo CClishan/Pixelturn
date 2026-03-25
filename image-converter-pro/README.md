@@ -58,3 +58,4 @@ batch-image-converter/
 - Optional single-image cap shown and enforced by the frontend:
   `VITE_SINGLE_FILE_LIMIT_MB=4`
   - Keep this aligned with the backend `MAX_UPLOAD_MB`. On Vercel, stay at or below `4`.
+- Oversized files can also be recompressed in the browser from the settings panel before they enter the queue.

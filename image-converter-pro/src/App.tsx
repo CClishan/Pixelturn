@@ -18,6 +18,7 @@ import { formatSize, getSingleFileLimitBytes, normalizeApiBaseUrl } from './feat
 
 const THEME_STORAGE_KEY = 'batch-image-converter-theme';
 const PIXEL_SCHEME_STORAGE_KEY = 'batch-image-converter-pixel-scheme';
+const AUTO_COMPRESS_STORAGE_KEY = 'batch-image-converter-auto-compress';
 
 const themeSwitchCopy = {
   en: {
@@ -59,7 +60,16 @@ function getInitialPixelScheme(): PixelScheme {
   return savedScheme === 'light' ? 'light' : 'dark';
 }
 
+function getInitialAutoCompressUploads(): boolean {
+  if (typeof window === 'undefined') {
+    return false;
+  }
+
+  return window.localStorage.getItem(AUTO_COMPRESS_STORAGE_KEY) === 'true';
+}
+
 export default function App(): ReactElement {
+  const [autoCompressUploads, setAutoCompressUploads] = useState(getInitialAutoCompressUploads);
   const [language, setLanguage] = useState<Language>('en');
   const [theme, setTheme] = useState<VisualTheme>(getInitialTheme);
   const [pixelScheme, setPixelScheme] = useState<PixelScheme>(getInitialPixelScheme);
@@ -88,7 +98,7 @@ export default function App(): ReactElement {
     removeFile,
     setFormat,
     setQuality,
-  } = useConverter({ apiBaseUrl, copy, singleFileLimitBytes });
+  } = useConverter({ apiBaseUrl, autoCompressUploads, copy, singleFileLimitBytes });
 
   useEffect(() => {
     document.body.dataset.theme = theme;
@@ -97,7 +107,8 @@ export default function App(): ReactElement {
     document.documentElement.lang = language === 'zh' ? 'zh-CN' : 'en';
     window.localStorage.setItem(THEME_STORAGE_KEY, theme);
     window.localStorage.setItem(PIXEL_SCHEME_STORAGE_KEY, pixelScheme);
-  }, [language, pixelScheme, theme]);
+    window.localStorage.setItem(AUTO_COMPRESS_STORAGE_KEY, String(autoCompressUploads));
+  }, [autoCompressUploads, language, pixelScheme, theme]);
 
   return (
     <div
@@ -154,6 +165,7 @@ export default function App(): ReactElement {
 
         <SettingsPanel
           apiBaseUrl={apiBaseUrl}
+          autoCompressUploads={autoCompressUploads}
           backendStatus={backendStatus}
           completedCount={completedFilesCount}
           copy={copy}
@@ -174,6 +186,7 @@ export default function App(): ReactElement {
 
             void handleConvert();
           }}
+          onAutoCompressUploadsChange={setAutoCompressUploads}
           onFormatChange={setFormat}
           onQualityChange={setQuality}
           onZipDownload={() => {

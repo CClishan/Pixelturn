@@ -153,6 +153,7 @@ The web app now uploads files one at a time and creates the ZIP in the browser. 
 
 - This app uploads files directly to the backend function, so Vercel is best for small to medium conversion batches.
 - Keep `MAX_UPLOAD_MB` and `VITE_SINGLE_FILE_LIMIT_MB` at or below `4` on Vercel. Vercel functions still enforce a hard request-body cap around `4.5 MB`, including multipart overhead.
+- The frontend can optionally recompress oversized images in the browser before upload. Enable it from the configuration panel when you need a best-effort fit under the single-image cap.
 - Local development still works with `python3 scripts/dev_start.py`.
 
 ## Notes

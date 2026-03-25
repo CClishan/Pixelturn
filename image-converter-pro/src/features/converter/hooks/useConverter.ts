@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 
 import { convertQueuedFile, getFriendlyErrorMessage } from '../api';
+import { compressImageToFit } from '../compression';
 import { downloadBlob, downloadQueueAsZip } from '../download';
 import type { ConverterCopy } from '../copy';
 import type { OutputFormat } from '../constants';
@@ -8,6 +9,7 @@ import type { QueuedFile } from '../types';
 import { createQueuedFile, hasConvertedResult } from '../utils';
 
 interface UseConverterOptions {
+  autoCompressUploads: boolean;
   apiBaseUrl: string;
   copy: ConverterCopy;
   singleFileLimitBytes: number;
@@ -38,7 +40,12 @@ interface UseConverterResult {
   setQuality: (quality: number) => void;
 }
 
-export function useConverter({ apiBaseUrl, copy, singleFileLimitBytes }: UseConverterOptions): UseConverterResult {
+export function useConverter({
+  autoCompressUploads,
+  apiBaseUrl,
+  copy,
+  singleFileLimitBytes,
+}: UseConverterOptions): UseConverterResult {
   const [files, setFiles] = useState<QueuedFile[]>([]);
   const [format, setFormat] = useState<OutputFormat>('JPG');
   const [quality, setQuality] = useState(85);
@@ -78,30 +85,7 @@ export function useConverter({ apiBaseUrl, copy, singleFileLimitBytes }: UseConv
       return;
     }
 
-    const { queuedFiles, rejectedFiles } = Array.from(newFiles).reduce(
-      (result, file) => {
-        if (file.size > singleFileLimitBytes) {
-          result.rejectedFiles.push(file.name);
-          return result;
-        }
-
-        result.queuedFiles.push(createQueuedFile(file));
-        return result;
-      },
-      { queuedFiles: [] as QueuedFile[], rejectedFiles: [] as string[] },
-    );
-
-    setNotice(
-      rejectedFiles.length > 0
-        ? {
-            type: 'error',
-            code: 'plain',
-            message: copy.notices.rejectedOversize(formatLimit(singleFileLimitBytes), rejectedFiles),
-          }
-        : null,
-    );
-    setFiles((previousFiles) => [...previousFiles, ...queuedFiles]);
-    queuedFiles.forEach(prepareQueuedFile);
+    void queueIncomingFiles(Array.from(newFiles));
   }
 
   function prepareQueuedFile(queuedFile: QueuedFile): void {
@@ -183,6 +167,45 @@ export function useConverter({ apiBaseUrl, copy, singleFileLimitBytes }: UseConv
     setFiles((previousFiles) => {
       return previousFiles.map((file) => (file.id === fileId ? updater(file) : file));
     });
+  }
+
+  async function queueIncomingFiles(incomingFiles: File[]): Promise<void> {
+    const preparedFiles: File[] = [];
+    const rejectedFiles: string[] = [];
+
+    for (const file of incomingFiles) {
+      if (file.size <= singleFileLimitBytes) {
+        preparedFiles.push(file);
+        continue;
+      }
+
+      if (!autoCompressUploads) {
+        rejectedFiles.push(file.name);
+        continue;
+      }
+
+      const compressedFile = await compressImageToFit(file, singleFileLimitBytes);
+      if (!compressedFile || compressedFile.size > singleFileLimitBytes) {
+        rejectedFiles.push(file.name);
+        continue;
+      }
+
+      preparedFiles.push(compressedFile);
+    }
+
+    const queuedFiles = preparedFiles.map(createQueuedFile);
+
+    setNotice(
+      rejectedFiles.length > 0
+        ? {
+            type: 'error',
+            code: 'plain',
+            message: copy.notices.rejectedOversize(formatLimit(singleFileLimitBytes), rejectedFiles),
+          }
+        : null,
+    );
+    setFiles((previousFiles) => [...previousFiles, ...queuedFiles]);
+    queuedFiles.forEach(prepareQueuedFile);
   }
 
   async function handleConvert(): Promise<void> {
