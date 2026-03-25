@@ -1,11 +1,30 @@
 # Batch Image Converter
 
-Local desktop tool for bulk image format conversion.
+Image conversion project with a React web frontend and a Flask API backend.
 
-This repo now supports three ways of running:
-- Tk desktop app from the repo root
+This repo supports two web-focused ways of running:
 - React + Python local web app
 - Split Vercel deployment with separate frontend and backend projects
+
+## Project layout
+
+- `image-converter-pro/` - Vite + React frontend
+- `backend/` - Flask API and shared conversion logic for the web app
+- `scripts/` - local development helpers
+- `index.py` - deployment entry point for Vercel
+
+```text
+batch-image-converter/
+|-- index.py
+|-- backend/
+|   |-- api_server.py
+|   `-- converter_core.py
+|-- scripts/
+|   `-- dev_start.py
+`-- image-converter-pro/
+    |-- package.json
+    `-- src/
+```
 
 ## Features
 
@@ -33,26 +52,20 @@ source .venv/bin/activate
 pip install -r requirements.txt
 ```
 
-## Run
-
-```bash
-python3 app.py
-```
-
 ## Web UI (React) + Python API
 
 This repo also includes a browser UI at `image-converter-pro/` that talks to a local Python API.
 
-1. Install backend dependencies:
+1. Install backend dependencies from the repo root:
 
 ```bash
 python3 -m pip install -r requirements.txt
 ```
 
-2. Start the API server (port `8000`):
+2. Start the API server from the repo root (port `8000`):
 
 ```bash
-python3 api_server.py
+python3 -m backend.api_server
 ```
 
 3. In a second terminal, run the frontend:
@@ -65,12 +78,14 @@ npm run dev
 
 4. Open `http://localhost:3000`, add images, and click **Convert Now**.
 
+Frontend source lives in `image-converter-pro/`.
+
 ### Sync start (backend + frontend)
 
 Run both services with one command from repo root:
 
 ```bash
-python3 dev_start.py
+python3 scripts/dev_start.py
 ```
 
 Press `Ctrl+C` to stop both.
@@ -102,7 +117,7 @@ Deploy this repo as two Vercel projects from the same GitHub repository.
 
 - Import the repo into Vercel.
 - Set the Root Directory to the repository root.
-- Vercel will use `index.py`, which exposes the Flask app from `api_server.py`.
+- Vercel will use `index.py`, which exposes the Flask app from `backend/api_server.py`.
 - Optional environment variable:
   - `ALLOWED_ORIGINS=https://your-frontend-domain.vercel.app`
   - You can provide multiple origins as a comma-separated list.
@@ -133,7 +148,7 @@ The web app now uploads files one at a time and creates the ZIP in the browser. 
 ### Vercel notes
 
 - This app uploads files directly to the backend function, so Vercel is best for small to medium conversion batches.
-- Local development still works the same way with `python3 dev_start.py`.
+- Local development still works with `python3 scripts/dev_start.py`.
 
 ## Notes
 

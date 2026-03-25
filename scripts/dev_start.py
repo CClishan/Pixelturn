@@ -18,7 +18,7 @@ def _terminate(proc: subprocess.Popen[bytes]) -> None:
 
 
 def main() -> int:
-    root = Path(__file__).resolve().parent
+    root = Path(__file__).resolve().parent.parent
     frontend_dir = root / "image-converter-pro"
 
     if not frontend_dir.is_dir():
@@ -28,7 +28,7 @@ def main() -> int:
     processes: list[subprocess.Popen[bytes]] = []
 
     try:
-        backend = subprocess.Popen([sys.executable, "api_server.py"], cwd=root)
+        backend = subprocess.Popen([sys.executable, "-m", "backend.api_server"], cwd=root)
         processes.append(backend)
 
         frontend = subprocess.Popen(["npm", "run", "dev"], cwd=frontend_dir)

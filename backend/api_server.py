@@ -9,7 +9,7 @@ from flask import Flask, jsonify, request, send_file
 from PIL import UnidentifiedImageError
 from werkzeug.exceptions import RequestEntityTooLarge
 
-from converter_core import OUTPUT_FORMATS, convert_image_bytes, normalize_quality, resolve_output_format
+from .converter_core import OUTPUT_FORMATS, convert_image_bytes, normalize_quality, resolve_output_format
 
 app = Flask(__name__)
 ALLOWED_ORIGINS = {origin.strip() for origin in os.getenv("ALLOWED_ORIGINS", "").split(",") if origin.strip()}
