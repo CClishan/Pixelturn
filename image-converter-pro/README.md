@@ -54,3 +54,4 @@ batch-image-converter/
   `VITE_API_PROXY_TARGET=http://127.0.0.1:8000`
 - Optional direct API base URL (for deployed frontend):
   `VITE_API_BASE_URL=https://your-api-host`
+  - Use the backend site root only. Do not append `/api`, `/api/health`, or `/api/convert-file`.

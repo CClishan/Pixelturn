@@ -135,6 +135,7 @@ Backend routes:
 - Framework preset: Vite.
 - Environment variable:
   - `VITE_API_BASE_URL=https://your-backend-domain.vercel.app`
+  - Do not include `/api`, `/api/health`, or `/api/convert-file` in this value. Use the backend site root only.
 
 ### 3) Recommended order
 

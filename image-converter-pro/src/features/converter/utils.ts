@@ -18,6 +18,42 @@ export function getFileTypeLabel(file: File): string {
   return file.type.split('/')[1]?.toUpperCase() || 'FILE';
 }
 
+const knownApiSuffixes = ['/api/health', '/api/convert-file', '/api/convert', '/api'];
+
+function stripKnownApiSuffix(value: string): string {
+  const trimmedValue = value.replace(/\/+$/, '');
+  if (!trimmedValue) {
+    return '';
+  }
+
+  const lowerCasedValue = trimmedValue.toLowerCase();
+  const matchedSuffix = knownApiSuffixes.find((suffix) => lowerCasedValue.endsWith(suffix));
+  if (!matchedSuffix) {
+    return trimmedValue;
+  }
+
+  return trimmedValue.slice(0, -matchedSuffix.length);
+}
+
+export function normalizeApiBaseUrl(rawApiBaseUrl: string): string {
+  const trimmedValue = rawApiBaseUrl.trim();
+  if (!trimmedValue) {
+    return '';
+  }
+
+  try {
+    const parsedUrl = new URL(trimmedValue);
+    const normalizedPathname = stripKnownApiSuffix(parsedUrl.pathname);
+    parsedUrl.pathname = normalizedPathname || '/';
+    parsedUrl.search = '';
+    parsedUrl.hash = '';
+
+    return `${parsedUrl.origin}${parsedUrl.pathname === '/' ? '' : parsedUrl.pathname}`;
+  } catch {
+    return stripKnownApiSuffix(trimmedValue);
+  }
+}
+
 export function buildApiUrl(apiBaseUrl: string, path: string): string {
   return apiBaseUrl ? `${apiBaseUrl}${path}` : path;
 }

@@ -8,6 +8,7 @@ import { cx, type VisualTheme } from '../theme';
 import type { BackendConnectionState } from '../types';
 
 interface SettingsPanelProps {
+  apiBaseUrl: string;
   backendStatus: BackendConnectionState;
   completedCount: number;
   copy: ConverterCopy;
@@ -27,6 +28,7 @@ interface SettingsPanelProps {
 }
 
 export function SettingsPanel({
+  apiBaseUrl,
   backendStatus,
   completedCount,
   copy,
@@ -45,6 +47,10 @@ export function SettingsPanel({
   onZipDownload,
 }: SettingsPanelProps): ReactElement {
   const isClassic = theme === 'classic';
+  const isBackendReady = backendStatus === 'connected';
+  const backendHint =
+    backendStatus === 'checking' ? copy.backendStatus.checking : copy.backendStatus.disconnectedDescription;
+  const resolvedApiBaseUrl = apiBaseUrl || copy.backendStatus.localProxyValue;
 
   return (
     <aside className="lg:col-span-4 space-y-6">
@@ -151,7 +157,7 @@ export function SettingsPanel({
 
         <div className="pt-6 space-y-3">
           <button
-            disabled={filesCount === 0 || isConverting || uploadingFilesCount > 0}
+            disabled={filesCount === 0 || isConverting || uploadingFilesCount > 0 || !isBackendReady}
             onClick={onConvert}
             className={getPrimaryActionClassName(theme)}
             type="button"
@@ -181,6 +187,12 @@ export function SettingsPanel({
             <div className={getErrorNoticeClassName(theme)}>
               <AlertCircle className="w-3.5 h-3.5 shrink-0" />
               {error}
+            </div>
+          ) : null}
+          {!isBackendReady && filesCount > 0 ? (
+            <div className={getErrorNoticeClassName(theme)}>
+              <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+              {backendHint}
             </div>
           ) : null}
 
@@ -215,6 +227,22 @@ export function SettingsPanel({
               {getBackendStatusDescription(copy, backendStatus)}
             </span>
           </span>
+        </div>
+        <div
+          className={cx(
+            'mt-4 border-t pt-3 text-[11px]',
+            isClassic ? 'border-neutral-100 text-neutral-500' : 'border-[var(--panel-border)] text-[var(--text-secondary)]',
+          )}
+        >
+          <p className={getSectionLabelClassName(theme)}>{copy.backendStatus.apiBaseLabel}</p>
+          <p
+            className={cx(
+              'mt-1 break-all font-mono text-[11px] leading-relaxed',
+              isClassic ? 'text-neutral-700' : 'text-[var(--text-primary)]',
+            )}
+          >
+            {resolvedApiBaseUrl}
+          </p>
         </div>
       </motion.div>
     </aside>
