@@ -55,11 +55,11 @@ export function createQueuedFile(file: File): QueuedFile {
   return {
     id: Math.random().toString(36).substring(7),
     file,
-    thumbnail: URL.createObjectURL(file),
     name: file.name,
     bytes: file.size,
     size: formatSize(file.size),
-    status: 'pending',
+    status: 'uploading',
+    uploadProgress: 0,
   };
 }
 

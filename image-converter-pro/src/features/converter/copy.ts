@@ -20,6 +20,15 @@ export interface ConverterCopy {
   currentQueueSize: (size: string) => string;
   downloadFile: (fileName: string) => string;
   removeFile: (fileName: string) => string;
+  uploadingFile: (progress: number) => string;
+  backendStatus: {
+    title: string;
+    checking: string;
+    connected: string;
+    disconnected: string;
+    connectedDescription: string;
+    disconnectedDescription: string;
+  };
   notices: {
     conversionFailed: string;
     convertedSuccess: (count: number) => string;
@@ -57,6 +66,15 @@ export const converterCopy: Record<Language, ConverterCopy> = {
     currentQueueSize: (size) => `Current queue size: ${size}`,
     downloadFile: (fileName) => `Download ${fileName}`,
     removeFile: (fileName) => `Remove ${fileName}`,
+    uploadingFile: (progress) => `Loading into queue ${progress}%`,
+    backendStatus: {
+      title: 'Backend Status',
+      checking: 'Checking handshake',
+      connected: 'Handshake complete',
+      disconnected: 'Handshake failed',
+      connectedDescription: 'The frontend has connected to the backend health endpoint successfully.',
+      disconnectedDescription: 'The backend health endpoint is not responding yet. Check the local API service.',
+    },
     notices: {
       conversionFailed: 'Conversion failed. Please try again.',
       convertedSuccess: (count) => `Converted ${count} file(s). Use the queue or ZIP button to download.`,
@@ -93,6 +111,15 @@ export const converterCopy: Record<Language, ConverterCopy> = {
     currentQueueSize: (size) => `当前队列大小：${size}`,
     downloadFile: (fileName) => `下载 ${fileName}`,
     removeFile: (fileName) => `移除 ${fileName}`,
+    uploadingFile: (progress) => `加载到队列中 ${progress}%`,
+    backendStatus: {
+      title: '后端状态',
+      checking: '正在握手检测',
+      connected: '握手成功',
+      disconnected: '握手失败',
+      connectedDescription: '前端已成功连接后端健康检查接口。',
+      disconnectedDescription: '后端健康检查接口暂未响应，请检查本地 API 服务是否启动。',
+    },
     notices: {
       conversionFailed: '转换失败，请重试。',
       convertedSuccess: (count) => `已完成 ${count} 个文件转换，可在队列中单独下载或点击打包下载。`,

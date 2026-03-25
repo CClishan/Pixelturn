@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 
 import { convertQueuedFile, getFriendlyErrorMessage } from '../api';
 import { downloadBlob, downloadQueueAsZip } from '../download';
@@ -26,6 +26,7 @@ interface UseConverterResult {
   quality: number;
   successMessage: string | null;
   totalUploadSize: number;
+  uploadingFilesCount: number;
   clearAll: () => void;
   handleConvert: () => Promise<void>;
   handleFiles: (newFiles: FileList | null) => void;
@@ -42,12 +43,30 @@ export function useConverter({ apiBaseUrl, copy }: UseConverterOptions): UseConv
   const [quality, setQuality] = useState(85);
   const [isConverting, setIsConverting] = useState(false);
   const [notice, setNotice] = useState<ConverterNotice | null>(null);
+  const fileReadersRef = useRef(new Map<string, FileReader>());
+  const thumbnailUrlsRef = useRef(new Map<string, string>());
+
+  useEffect(() => {
+    return () => {
+      fileReadersRef.current.forEach((reader) => {
+        if (reader.readyState === FileReader.LOADING) {
+          reader.abort();
+        }
+      });
+      thumbnailUrlsRef.current.forEach((thumbnailUrl) => {
+        URL.revokeObjectURL(thumbnailUrl);
+      });
+    };
+  }, []);
 
   const totalUploadSize = useMemo(() => {
     return files.reduce((totalSize, file) => totalSize + file.bytes, 0);
   }, [files]);
   const completedFilesCount = useMemo(() => {
     return files.filter(hasConvertedResult).length;
+  }, [files]);
+  const uploadingFilesCount = useMemo(() => {
+    return files.filter((file) => file.status === 'uploading').length;
   }, [files]);
   const { errorMessage, successMessage } = useMemo(() => {
     return getNoticeMessages(notice, copy);
@@ -58,23 +77,84 @@ export function useConverter({ apiBaseUrl, copy }: UseConverterOptions): UseConv
       return;
     }
 
+    const queuedFiles = Array.from(newFiles, createQueuedFile);
+
     setNotice(null);
-    setFiles((previousFiles) => [...previousFiles, ...Array.from(newFiles, createQueuedFile)]);
+    setFiles((previousFiles) => [...previousFiles, ...queuedFiles]);
+    queuedFiles.forEach(prepareQueuedFile);
+  }
+
+  function prepareQueuedFile(queuedFile: QueuedFile): void {
+    const reader = new FileReader();
+    fileReadersRef.current.set(queuedFile.id, reader);
+
+    reader.onprogress = (event) => {
+      if (!event.lengthComputable) {
+        return;
+      }
+
+      const nextProgress = Math.max(5, Math.min(99, Math.round((event.loaded / event.total) * 100)));
+      updateFile(queuedFile.id, (file) => ({
+        ...file,
+        uploadProgress: nextProgress,
+      }));
+    };
+
+    reader.onload = () => {
+      const thumbnail = URL.createObjectURL(queuedFile.file);
+      thumbnailUrlsRef.current.set(queuedFile.id, thumbnail);
+      updateFile(queuedFile.id, (file) => ({
+        ...file,
+        thumbnail,
+        status: 'pending',
+        uploadProgress: 100,
+      }));
+    };
+
+    reader.onerror = () => {
+      updateFile(queuedFile.id, (file) => ({
+        ...file,
+        status: 'failed',
+        uploadProgress: undefined,
+      }));
+    };
+
+    reader.onloadend = () => {
+      fileReadersRef.current.delete(queuedFile.id);
+    };
+
+    reader.readAsArrayBuffer(queuedFile.file);
   }
 
   function removeFile(fileId: string): void {
-    setFiles((previousFiles) => {
-      const removedFile = previousFiles.find((file) => file.id === fileId);
-      if (removedFile) {
-        URL.revokeObjectURL(removedFile.thumbnail);
-      }
+    const activeReader = fileReadersRef.current.get(fileId);
+    if (activeReader?.readyState === FileReader.LOADING) {
+      activeReader.abort();
+    }
+    fileReadersRef.current.delete(fileId);
 
-      return previousFiles.filter((file) => file.id !== fileId);
-    });
+    const thumbnailUrl = thumbnailUrlsRef.current.get(fileId);
+    if (thumbnailUrl) {
+      URL.revokeObjectURL(thumbnailUrl);
+      thumbnailUrlsRef.current.delete(fileId);
+    }
+
+    setFiles((previousFiles) => previousFiles.filter((file) => file.id !== fileId));
   }
 
   function clearAll(): void {
-    files.forEach((file) => URL.revokeObjectURL(file.thumbnail));
+    fileReadersRef.current.forEach((reader) => {
+      if (reader.readyState === FileReader.LOADING) {
+        reader.abort();
+      }
+    });
+    fileReadersRef.current.clear();
+
+    thumbnailUrlsRef.current.forEach((thumbnailUrl) => {
+      URL.revokeObjectURL(thumbnailUrl);
+    });
+    thumbnailUrlsRef.current.clear();
+
     setFiles([]);
     setNotice(null);
   }
@@ -86,27 +166,34 @@ export function useConverter({ apiBaseUrl, copy }: UseConverterOptions): UseConv
   }
 
   async function handleConvert(): Promise<void> {
-    if (files.length === 0) {
+    if (files.length === 0 || uploadingFilesCount > 0) {
       return;
     }
 
-    const queuedFiles = [...files];
+    const queuedFiles = files.filter((file) => file.status !== 'uploading');
     const failedFiles: string[] = [];
 
     setNotice(null);
     setIsConverting(true);
     setFiles((previousFiles) => {
-      return previousFiles.map((file) => ({
-        ...file,
-        status: 'pending',
-        convertedBlob: undefined,
-        convertedName: undefined,
-      }));
+      return previousFiles.map((file) => {
+        if (file.status === 'uploading') {
+          return file;
+        }
+
+        return {
+          ...file,
+          status: 'pending',
+          uploadProgress: undefined,
+          convertedBlob: undefined,
+          convertedName: undefined,
+        };
+      });
     });
 
     try {
       for (const queuedFile of queuedFiles) {
-        updateFile(queuedFile.id, (file) => ({ ...file, status: 'converting' }));
+        updateFile(queuedFile.id, (file) => ({ ...file, status: 'converting', uploadProgress: undefined }));
 
         try {
           const conversionResult = await convertQueuedFile({
@@ -196,6 +283,7 @@ export function useConverter({ apiBaseUrl, copy }: UseConverterOptions): UseConv
     quality,
     successMessage,
     totalUploadSize,
+    uploadingFilesCount,
     clearAll,
     handleConvert,
     handleFiles,

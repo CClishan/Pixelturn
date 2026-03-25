@@ -24,6 +24,11 @@ export function getFriendlyErrorMessage(
   return messages.responseStatus(500);
 }
 
+export async function checkBackendHealth(apiBaseUrl: string): Promise<boolean> {
+  const response = await fetch(buildApiUrl(apiBaseUrl, '/api/health'));
+  return response.ok;
+}
+
 export async function convertQueuedFile(options: {
   apiBaseUrl: string;
   errorMessages: ApiErrorMessages;
