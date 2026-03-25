@@ -110,6 +110,7 @@ Deploy this repo as two Vercel projects from the same GitHub repository.
 Backend routes:
 - `/`
 - `/api/health`
+- `/api/convert-file`
 - `/api/convert`
 
 ### 2) Frontend project
@@ -126,6 +127,8 @@ Backend routes:
 2. Copy the backend production URL into the frontend project's `VITE_API_BASE_URL`.
 3. Redeploy the frontend project.
 4. Add the frontend URL back into the backend `ALLOWED_ORIGINS`.
+
+The web app now uploads files one at a time and creates the ZIP in the browser. This avoids the misleading CORS errors that can happen on Vercel when a multi-file upload is rejected before Flask can return its own headers.
 
 ### Vercel notes
 

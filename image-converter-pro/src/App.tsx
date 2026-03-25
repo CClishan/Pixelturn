@@ -17,14 +17,16 @@ import {
   AlertCircle,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
+import { zipSync } from 'fflate';
 
 interface QueuedFile {
   id: string;
   file: File;
   thumbnail: string;
   name: string;
+  bytes: number;
   size: string;
-  status: 'pending' | 'converting' | 'completed';
+  status: 'pending' | 'converting' | 'completed' | 'failed';
 }
 
 const outputFormats = ['JPG', 'PNG', 'WEBP', 'BMP', 'TIFF'] as const;
@@ -38,6 +40,14 @@ const formatToApiKey: Record<OutputFormat, string> = {
   TIFF: 'TIFF',
 };
 
+const outputSuffixByFormat: Record<OutputFormat, string> = {
+  JPG: '.jpg',
+  PNG: '.png',
+  WEBP: '.webp',
+  BMP: '.bmp',
+  TIFF: '.tiff',
+};
+
 export default function App() {
   const [files, setFiles] = useState<QueuedFile[]>([]);
   const [format, setFormat] = useState<OutputFormat>('JPG');
@@ -46,6 +56,7 @@ export default function App() {
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const apiBaseUrl = (import.meta.env.VITE_API_BASE_URL ?? '').replace(/\/$/, '');
 
   const getFileTypeLabel = (file: File) => file.type.split('/')[1]?.toUpperCase() || 'FILE';
 
@@ -55,6 +66,75 @@ export default function App() {
     const sizes = ['Bytes', 'KB', 'MB', 'GB'];
     const i = Math.floor(Math.log(bytes) / Math.log(k));
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+  };
+
+  const buildApiUrl = (path: string) => (apiBaseUrl ? `${apiBaseUrl}${path}` : path);
+
+  const getOutputName = (fileName: string) => {
+    const lastDot = fileName.lastIndexOf('.');
+    const baseName = lastDot > 0 ? fileName.slice(0, lastDot) : fileName;
+    return `${baseName || 'image'}${outputSuffixByFormat[format]}`;
+  };
+
+  const getUniqueName = (fileName: string, usedNames: Set<string>) => {
+    if (!usedNames.has(fileName)) {
+      usedNames.add(fileName);
+      return fileName;
+    }
+
+    const lastDot = fileName.lastIndexOf('.');
+    const baseName = lastDot > 0 ? fileName.slice(0, lastDot) : fileName;
+    const extension = lastDot > 0 ? fileName.slice(lastDot) : '';
+    let duplicate = 1;
+    let candidate = `${baseName}_${duplicate}${extension}`;
+
+    while (usedNames.has(candidate)) {
+      duplicate += 1;
+      candidate = `${baseName}_${duplicate}${extension}`;
+    }
+
+    usedNames.add(candidate);
+    return candidate;
+  };
+
+  const getFriendlyErrorMessage = (err: unknown) => {
+    if (err instanceof Error) {
+      if (/Failed to fetch/i.test(err.message)) {
+        return 'The API request failed before the server responded. Check the backend deployment, API URL, and CORS allowlist.';
+      }
+      return err.message;
+    }
+
+    return 'Conversion failed. Please try again.';
+  };
+
+  const getErrorMessageFromResponse = async (response: Response) => {
+    try {
+      const payload = (await response.json()) as { error?: string };
+      if (payload.error) {
+        return payload.error;
+      }
+    } catch {
+      // Response body is not JSON.
+    }
+
+    if (response.status === 413) {
+      return 'This image is too large for the current backend deployment.';
+    }
+
+    return `Conversion failed with status ${response.status}.`;
+  };
+
+  const getDownloadNameFromHeader = (header: string | null) => {
+    if (!header) return null;
+
+    const utf8Match = header.match(/filename\*=UTF-8''([^;]+)/i);
+    if (utf8Match?.[1]) {
+      return decodeURIComponent(utf8Match[1]);
+    }
+
+    const basicMatch = header.match(/filename="?([^";]+)"?/i);
+    return basicMatch?.[1] ?? null;
   };
 
   const handleFiles = (newFiles: FileList | null) => {
@@ -68,6 +148,7 @@ export default function App() {
       file,
       thumbnail: URL.createObjectURL(file),
       name: file.name,
+      bytes: file.size,
       size: formatSize(file.size),
       status: 'pending'
     }));
@@ -105,54 +186,88 @@ export default function App() {
   const handleConvert = async () => {
     if (files.length === 0) return;
 
+    const queuedFiles = [...files];
+    const usedZipNames = new Set<string>();
+    const zipEntries: Record<string, Uint8Array> = {};
+    const failedFiles: string[] = [];
+
     setError(null);
     setSuccessMessage(null);
     setIsConverting(true);
 
-    setFiles(prev => prev.map(f => ({ ...f, status: 'converting' })));
-
-    const formData = new FormData();
-    files.forEach(({ file }) => formData.append('files', file));
-    formData.append('format', formatToApiKey[format]);
-    formData.append('quality', String(quality));
+    setFiles(prev => prev.map(f => ({ ...f, status: 'pending' })));
 
     try {
-      const response = await fetch(
-        `${import.meta.env.VITE_API_BASE_URL ?? ''}/api/convert`,
-        {
-          method: 'POST',
-          body: formData,
-        }
-      );
+      for (const queuedFile of queuedFiles) {
+        setFiles(prev =>
+          prev.map(file =>
+            file.id === queuedFile.id ? { ...file, status: 'converting' } : file
+          )
+        );
 
-      if (!response.ok) {
-        let message = 'Conversion failed. Please try again.';
+        const formData = new FormData();
+        formData.append('file', queuedFile.file);
+        formData.append('format', formatToApiKey[format]);
+        formData.append('quality', String(quality));
+
         try {
-          const payload = (await response.json()) as { error?: string };
-          if (payload.error) {
-            message = payload.error;
-          }
-        } catch {
-          // Response body is not JSON.
-        }
+          const response = await fetch(buildApiUrl('/api/convert-file'), {
+            method: 'POST',
+            body: formData,
+          });
 
-        throw new Error(message);
+          if (!response.ok) {
+            throw new Error(await getErrorMessageFromResponse(response));
+          }
+
+          const downloadName =
+            getDownloadNameFromHeader(response.headers.get('Content-Disposition')) ??
+            getOutputName(queuedFile.name);
+          const zipName = getUniqueName(downloadName, usedZipNames);
+          zipEntries[zipName] = new Uint8Array(await response.arrayBuffer());
+
+          setFiles(prev =>
+            prev.map(file =>
+              file.id === queuedFile.id ? { ...file, status: 'completed' } : file
+            )
+          );
+        } catch (err) {
+          failedFiles.push(`${queuedFile.name}: ${getFriendlyErrorMessage(err)}`);
+          setFiles(prev =>
+            prev.map(file =>
+              file.id === queuedFile.id ? { ...file, status: 'failed' } : file
+            )
+          );
+        }
       }
 
-      const blob = await response.blob();
-      const fileName = `converted_${formatToApiKey[format].toLowerCase()}.zip`;
-      downloadBlob(blob, fileName);
+      const convertedCount = Object.keys(zipEntries).length;
+      if (convertedCount === 0) {
+        throw new Error(failedFiles[0] ?? 'Conversion failed. Please try again.');
+      }
 
-      setFiles(prev => prev.map(f => ({ ...f, status: 'completed' })));
-      setSuccessMessage(`Converted ${files.length} file(s). ZIP download started.`);
+      const zipData = zipSync(zipEntries, { level: 6 });
+      const fileName = `converted_${formatToApiKey[format].toLowerCase()}.zip`;
+      downloadBlob(new Blob([zipData], { type: 'application/zip' }), fileName);
+
+      if (failedFiles.length > 0) {
+        setError(`Converted ${convertedCount} file(s), but some failed: ${failedFiles.join(' | ')}`);
+      } else {
+        setSuccessMessage(`Converted ${convertedCount} file(s). ZIP download started.`);
+      }
     } catch (err) {
-      const message = err instanceof Error ? err.message : 'Conversion failed. Please try again.';
-      setFiles(prev => prev.map(f => ({ ...f, status: 'pending' })));
-      setError(message);
+      setFiles(prev =>
+        prev.map(file =>
+          file.status === 'converting' ? { ...file, status: 'pending' } : file
+        )
+      );
+      setError(getFriendlyErrorMessage(err));
     } finally {
       setIsConverting(false);
     }
   };
+
+  const totalUploadSize = files.reduce((sum, file) => sum + file.bytes, 0);
 
   const onDragOver = (e: DragEvent) => {
     e.preventDefault();
@@ -250,9 +365,13 @@ export default function App() {
                         {file.status === 'completed' && (
                           <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
                         )}
+                        {file.status === 'failed' && (
+                          <AlertCircle className="w-3.5 h-3.5 text-red-400" />
+                        )}
                         <button 
                           onClick={() => removeFile(file.id)}
-                          className="p-2 text-neutral-200 hover:text-neutral-500 hover:bg-neutral-100 rounded-lg transition-all"
+                          disabled={isConverting}
+                          className="p-2 text-neutral-200 hover:text-neutral-500 hover:bg-neutral-100 rounded-lg transition-all disabled:cursor-not-allowed disabled:opacity-40"
                         >
                           <X className="w-3.5 h-3.5" />
                         </button>
@@ -322,12 +441,16 @@ export default function App() {
               </div>
             </div>
 
-            {/* Resize Toggle */}
             <div className="space-y-2">
-              <label className="text-[10px] font-bold text-neutral-300 uppercase tracking-widest">Backend</label>
+              <label className="text-[10px] font-bold text-neutral-300 uppercase tracking-widest">Upload Strategy</label>
               <p className="text-[11px] text-neutral-500 leading-relaxed">
-                Conversion runs on the local Python API and downloads a ZIP with converted images.
+                Files convert one by one and are packed into a ZIP in your browser to avoid multi-file upload failures on Vercel.
               </p>
+              {files.length > 0 && (
+                <p className="text-[11px] text-neutral-400">
+                  Current queue size: {formatSize(totalUploadSize)}
+                </p>
+              )}
             </div>
 
             {/* Actions */}
@@ -360,7 +483,7 @@ export default function App() {
 
               {error && (
                 <div className="mt-2 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-[11px] text-red-700 flex items-center gap-2">
-                  <AlertCircle className="w-3.5 h-3.5" />
+                  <AlertCircle className="w-3.5 h-3.5 shrink-0" />
                   {error}
                 </div>
               )}
