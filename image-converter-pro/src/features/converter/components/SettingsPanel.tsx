@@ -17,6 +17,7 @@ interface SettingsPanelProps {
   format: OutputFormat;
   isConverting: boolean;
   quality: number;
+  singleFileLimit: string;
   successMessage: string | null;
   theme: VisualTheme;
   totalUploadSize: string;
@@ -37,6 +38,7 @@ export function SettingsPanel({
   format,
   isConverting,
   quality,
+  singleFileLimit,
   successMessage,
   theme,
   totalUploadSize,
@@ -242,6 +244,15 @@ export function SettingsPanel({
             )}
           >
             {resolvedApiBaseUrl}
+          </p>
+          <p className={cx('mt-3', getSectionLabelClassName(theme))}>{copy.backendStatus.uploadLimitLabel}</p>
+          <p
+            className={cx(
+              'mt-1 break-all font-mono text-[11px] leading-relaxed',
+              isClassic ? 'text-neutral-700' : 'text-[var(--text-primary)]',
+            )}
+          >
+            {singleFileLimit}
           </p>
         </div>
       </motion.div>

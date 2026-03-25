@@ -94,6 +94,7 @@ Notes:
 - Dev mode proxies `/api/*` from Vite to `http://127.0.0.1:8000`.
 - Set `VITE_API_PROXY_TARGET` to change backend target in local dev.
 - Set `VITE_API_BASE_URL` only if frontend is deployed separately from the API.
+- Set `VITE_SINGLE_FILE_LIMIT_MB` to keep the frontend picker aligned with your backend upload cap. Default: `4`.
 
 ## GitHub
 
@@ -121,6 +122,7 @@ Deploy this repo as two Vercel projects from the same GitHub repository.
 - Optional environment variable:
   - `ALLOWED_ORIGINS=https://your-frontend-domain.vercel.app`
   - You can provide multiple origins as a comma-separated list.
+  - `MAX_UPLOAD_MB=4`
 
 Backend routes:
 - `/`
@@ -136,6 +138,7 @@ Backend routes:
 - Environment variable:
   - `VITE_API_BASE_URL=https://your-backend-domain.vercel.app`
   - Do not include `/api`, `/api/health`, or `/api/convert-file` in this value. Use the backend site root only.
+  - `VITE_SINGLE_FILE_LIMIT_MB=4`
 
 ### 3) Recommended order
 
@@ -149,6 +152,7 @@ The web app now uploads files one at a time and creates the ZIP in the browser. 
 ### Vercel notes
 
 - This app uploads files directly to the backend function, so Vercel is best for small to medium conversion batches.
+- Keep `MAX_UPLOAD_MB` and `VITE_SINGLE_FILE_LIMIT_MB` at or below `4` on Vercel. Vercel functions still enforce a hard request-body cap around `4.5 MB`, including multipart overhead.
 - Local development still works with `python3 scripts/dev_start.py`.
 
 ## Notes

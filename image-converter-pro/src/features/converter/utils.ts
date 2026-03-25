@@ -2,6 +2,8 @@ import type { OutputFormat } from './constants';
 import { outputSuffixByFormat } from './constants';
 import type { QueuedFile } from './types';
 
+export const defaultSingleFileLimitBytes = 4 * 1024 * 1024;
+
 export function formatSize(bytes: number): string {
   if (bytes === 0) {
     return '0 Bytes';
@@ -52,6 +54,15 @@ export function normalizeApiBaseUrl(rawApiBaseUrl: string): string {
   } catch {
     return stripKnownApiSuffix(trimmedValue);
   }
+}
+
+export function getSingleFileLimitBytes(rawLimitMb: string | undefined): number {
+  const parsedLimitMb = Number(rawLimitMb);
+  if (!Number.isFinite(parsedLimitMb) || parsedLimitMb <= 0) {
+    return defaultSingleFileLimitBytes;
+  }
+
+  return Math.round(parsedLimitMb * 1024 * 1024);
 }
 
 export function buildApiUrl(apiBaseUrl: string, path: string): string {

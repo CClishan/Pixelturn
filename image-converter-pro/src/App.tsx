@@ -14,7 +14,7 @@ import { converterCopy, type Language } from './features/converter/copy';
 import { useBackendHealth } from './features/converter/hooks/useBackendHealth';
 import { useConverter } from './features/converter/hooks/useConverter';
 import { cx, type PixelScheme, type VisualTheme } from './features/converter/theme';
-import { formatSize, normalizeApiBaseUrl } from './features/converter/utils';
+import { formatSize, getSingleFileLimitBytes, normalizeApiBaseUrl } from './features/converter/utils';
 
 const THEME_STORAGE_KEY = 'batch-image-converter-theme';
 const PIXEL_SCHEME_STORAGE_KEY = 'batch-image-converter-pixel-scheme';
@@ -65,6 +65,7 @@ export default function App(): ReactElement {
   const [pixelScheme, setPixelScheme] = useState<PixelScheme>(getInitialPixelScheme);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const apiBaseUrl = normalizeApiBaseUrl(import.meta.env.VITE_API_BASE_URL ?? '');
+  const singleFileLimitBytes = getSingleFileLimitBytes(import.meta.env.VITE_SINGLE_FILE_LIMIT_MB);
   const copy = converterCopy[language];
   const themeCopy = themeSwitchCopy[language];
   const pixelToneCopy = pixelSchemeCopy[language];
@@ -87,7 +88,7 @@ export default function App(): ReactElement {
     removeFile,
     setFormat,
     setQuality,
-  } = useConverter({ apiBaseUrl, copy });
+  } = useConverter({ apiBaseUrl, copy, singleFileLimitBytes });
 
   useEffect(() => {
     document.body.dataset.theme = theme;
@@ -156,6 +157,7 @@ export default function App(): ReactElement {
           backendStatus={backendStatus}
           completedCount={completedFilesCount}
           copy={copy}
+          singleFileLimit={formatSize(singleFileLimitBytes)}
           error={errorMessage}
           filesCount={files.length}
           format={format}

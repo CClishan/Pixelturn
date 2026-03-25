@@ -10,6 +10,7 @@ import { createQueuedFile, hasConvertedResult } from '../utils';
 interface UseConverterOptions {
   apiBaseUrl: string;
   copy: ConverterCopy;
+  singleFileLimitBytes: number;
 }
 
 type ConverterNotice =
@@ -37,7 +38,7 @@ interface UseConverterResult {
   setQuality: (quality: number) => void;
 }
 
-export function useConverter({ apiBaseUrl, copy }: UseConverterOptions): UseConverterResult {
+export function useConverter({ apiBaseUrl, copy, singleFileLimitBytes }: UseConverterOptions): UseConverterResult {
   const [files, setFiles] = useState<QueuedFile[]>([]);
   const [format, setFormat] = useState<OutputFormat>('JPG');
   const [quality, setQuality] = useState(85);
@@ -77,9 +78,28 @@ export function useConverter({ apiBaseUrl, copy }: UseConverterOptions): UseConv
       return;
     }
 
-    const queuedFiles = Array.from(newFiles, createQueuedFile);
+    const { queuedFiles, rejectedFiles } = Array.from(newFiles).reduce(
+      (result, file) => {
+        if (file.size > singleFileLimitBytes) {
+          result.rejectedFiles.push(file.name);
+          return result;
+        }
 
-    setNotice(null);
+        result.queuedFiles.push(createQueuedFile(file));
+        return result;
+      },
+      { queuedFiles: [] as QueuedFile[], rejectedFiles: [] as string[] },
+    );
+
+    setNotice(
+      rejectedFiles.length > 0
+        ? {
+            type: 'error',
+            code: 'plain',
+            message: copy.notices.rejectedOversize(formatLimit(singleFileLimitBytes), rejectedFiles),
+          }
+        : null,
+    );
     setFiles((previousFiles) => [...previousFiles, ...queuedFiles]);
     queuedFiles.forEach(prepareQueuedFile);
   }
@@ -293,6 +313,10 @@ export function useConverter({ apiBaseUrl, copy }: UseConverterOptions): UseConv
     setFormat,
     setQuality,
   };
+}
+
+function formatLimit(limitBytes: number): string {
+  return `${Number((limitBytes / (1024 * 1024)).toFixed(2))} MB`;
 }
 
 function getNoticeMessages(

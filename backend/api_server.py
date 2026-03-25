@@ -13,6 +13,8 @@ from .converter_core import OUTPUT_FORMATS, convert_image_bytes, normalize_quali
 
 app = Flask(__name__)
 ALLOWED_ORIGINS = {origin.strip() for origin in os.getenv("ALLOWED_ORIGINS", "").split(",") if origin.strip()}
+MAX_UPLOAD_MB = float(os.getenv("MAX_UPLOAD_MB", "4"))
+app.config["MAX_CONTENT_LENGTH"] = int(MAX_UPLOAD_MB * 1024 * 1024)
 OUTPUT_MIME_TYPES = {
     "JPEG": "image/jpeg",
     "PNG": "image/png",
@@ -20,6 +22,12 @@ OUTPUT_MIME_TYPES = {
     "BMP": "image/bmp",
     "TIFF": "image/tiff",
 }
+
+
+def _format_upload_limit_mb(limit_mb: float) -> str:
+    if float(limit_mb).is_integer():
+        return f"{int(limit_mb)} MB"
+    return f"{limit_mb:.2f} MB".rstrip("0").rstrip(".")
 
 
 def _safe_name(filename: str) -> str:
@@ -74,9 +82,7 @@ def handle_request_too_large(_error):
     return (
         jsonify(
             {
-                "error": (
-                    "Upload too large for this deployment. Try fewer files at once or smaller images."
-                )
+                "error": f"Upload too large for this deployment. Keep each image within {_format_upload_limit_mb(MAX_UPLOAD_MB)}."
             }
         ),
         413,

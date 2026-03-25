@@ -55,3 +55,6 @@ batch-image-converter/
 - Optional direct API base URL (for deployed frontend):
   `VITE_API_BASE_URL=https://your-api-host`
   - Use the backend site root only. Do not append `/api`, `/api/health`, or `/api/convert-file`.
+- Optional single-image cap shown and enforced by the frontend:
+  `VITE_SINGLE_FILE_LIMIT_MB=4`
+  - Keep this aligned with the backend `MAX_UPLOAD_MB`. On Vercel, stay at or below `4`.
