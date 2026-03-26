@@ -110,8 +110,8 @@ export function useConverter({
       updateFile(queuedFile.id, (file) => ({
         ...file,
         thumbnail,
-        status: 'pending',
-        uploadProgress: 100,
+        status: file.status === 'failed' ? 'failed' : 'pending',
+        uploadProgress: file.status === 'failed' ? undefined : 100,
       }));
     };
 
@@ -182,29 +182,42 @@ export function useConverter({
       }
 
       if (!autoCompressUploads) {
+        const failureReason = copy.compressionFailures.cannotFit(limitLabel);
+        queuedFiles.push(
+          createQueuedFile(file, {
+            errorDetail: failureReason,
+            status: 'failed',
+          }),
+        );
         rejectedFiles.push(file.name);
         continue;
       }
 
       const compressedResult = await compressImageToFit(file, singleFileLimitBytes);
       if (compressedResult.ok === false) {
+        const failureReason = getCompressionFailureMessage(compressedResult.reason, copy, limitLabel);
+        queuedFiles.push(
+          createQueuedFile(file, {
+            errorDetail: failureReason,
+            status: 'failed',
+          }),
+        );
         rejectedFilesWithReasons.push(
-          `${file.name}: ${getCompressionFailureMessage(
-            compressedResult.reason,
-            copy,
-            limitLabel,
-          )}`,
+          `${file.name}: ${failureReason}`,
         );
         continue;
       }
 
       if (compressedResult.file.size > singleFileLimitBytes) {
+        const failureReason = getCompressionFailureMessage('cannot_fit', copy, limitLabel);
+        queuedFiles.push(
+          createQueuedFile(file, {
+            errorDetail: failureReason,
+            status: 'failed',
+          }),
+        );
         rejectedFilesWithReasons.push(
-          `${file.name}: ${getCompressionFailureMessage(
-            'cannot_fit',
-            copy,
-            limitLabel,
-          )}`,
+          `${file.name}: ${failureReason}`,
         );
         continue;
       }
@@ -242,7 +255,7 @@ export function useConverter({
       return;
     }
 
-    const queuedFiles = files.filter((file) => file.status !== 'uploading');
+    const queuedFiles = files.filter((file) => file.status === 'pending' || file.status === 'completed');
     const failedFiles: string[] = [];
 
     setNotice(null);
@@ -250,6 +263,10 @@ export function useConverter({
     setFiles((previousFiles) => {
       return previousFiles.map((file) => {
         if (file.status === 'uploading') {
+          return file;
+        }
+
+        if (file.status === 'failed') {
           return file;
         }
 

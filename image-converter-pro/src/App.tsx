@@ -9,6 +9,7 @@ import type { ReactElement } from 'react';
 import { LanguageToggle } from './features/converter/components/LanguageToggle';
 import { QueueList } from './features/converter/components/QueueList';
 import { SettingsPanel } from './features/converter/components/SettingsPanel';
+import { UploadOptionCards } from './features/converter/components/UploadOptionCards';
 import { UploadDropzone } from './features/converter/components/UploadDropzone';
 import { converterCopy, type Language } from './features/converter/copy';
 import { useBackendHealth } from './features/converter/hooks/useBackendHealth';
@@ -152,6 +153,15 @@ export default function App(): ReactElement {
             onFilesSelected={handleFiles}
           />
 
+          <UploadOptionCards
+            autoCompressUploads={autoCompressUploads}
+            copy={copy}
+            singleFileLimit={formatSize(singleFileLimitBytes)}
+            theme={theme}
+            totalUploadSize={formatSize(totalUploadSize)}
+            onAutoCompressUploadsChange={setAutoCompressUploads}
+          />
+
           <QueueList
             copy={copy}
             files={files}
@@ -165,7 +175,6 @@ export default function App(): ReactElement {
 
         <SettingsPanel
           apiBaseUrl={apiBaseUrl}
-          autoCompressUploads={autoCompressUploads}
           backendStatus={backendStatus}
           completedCount={completedFilesCount}
           copy={copy}
@@ -177,7 +186,6 @@ export default function App(): ReactElement {
           quality={quality}
           successMessage={successMessage}
           theme={theme}
-          totalUploadSize={formatSize(totalUploadSize)}
           uploadingFilesCount={uploadingFilesCount}
           onConvert={() => {
             if (backendStatus !== 'connected') {
@@ -186,7 +194,6 @@ export default function App(): ReactElement {
 
             void handleConvert();
           }}
-          onAutoCompressUploadsChange={setAutoCompressUploads}
           onFormatChange={setFormat}
           onQualityChange={setQuality}
           onZipDownload={() => {

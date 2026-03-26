@@ -9,7 +9,6 @@ import type { BackendConnectionState } from '../types';
 
 interface SettingsPanelProps {
   apiBaseUrl: string;
-  autoCompressUploads: boolean;
   backendStatus: BackendConnectionState;
   completedCount: number;
   copy: ConverterCopy;
@@ -21,10 +20,8 @@ interface SettingsPanelProps {
   singleFileLimit: string;
   successMessage: string | null;
   theme: VisualTheme;
-  totalUploadSize: string;
   uploadingFilesCount: number;
   onConvert: () => void;
-  onAutoCompressUploadsChange: (nextValue: boolean) => void;
   onFormatChange: (format: OutputFormat) => void;
   onQualityChange: (quality: number) => void;
   onZipDownload: () => void;
@@ -32,7 +29,6 @@ interface SettingsPanelProps {
 
 export function SettingsPanel({
   apiBaseUrl,
-  autoCompressUploads,
   backendStatus,
   completedCount,
   copy,
@@ -44,10 +40,8 @@ export function SettingsPanel({
   singleFileLimit,
   successMessage,
   theme,
-  totalUploadSize,
   uploadingFilesCount,
   onConvert,
-  onAutoCompressUploadsChange,
   onFormatChange,
   onQualityChange,
   onZipDownload,
@@ -142,60 +136,6 @@ export function SettingsPanel({
               }
             />
           </div>
-        </div>
-
-        <div
-          className={cx(
-            'space-y-2',
-            isClassic ? '' : 'border border-[var(--soft-border)] bg-[var(--panel-muted)] px-4 py-4',
-          )}
-        >
-          <label className={getSectionLabelClassName(theme)}>{copy.uploadStrategyLabel}</label>
-          <p className={cx(isClassic ? 'text-[11px] text-neutral-500 leading-relaxed' : 'text-[11px] leading-relaxed text-[var(--text-secondary)]')}>
-            {copy.uploadStrategyDescription}
-          </p>
-          {filesCount > 0 ? (
-            <p className={cx(isClassic ? 'text-[11px] text-neutral-400' : 'text-[11px] text-[var(--text-muted)]')}>
-              {copy.currentQueueSize(totalUploadSize)}
-            </p>
-          ) : null}
-        </div>
-
-        <div
-          className={cx(
-            'space-y-3',
-            isClassic ? '' : 'border border-[var(--soft-border)] bg-[var(--panel-muted)] px-4 py-4',
-          )}
-        >
-          <div className="flex items-center justify-between gap-3">
-            <label className={getSectionLabelClassName(theme)}>{copy.autoCompressLabel}</label>
-            <div
-              className={cx(
-                'inline-flex p-1',
-                isClassic
-                  ? 'rounded-2xl border border-neutral-200 bg-neutral-50'
-                  : 'toggle-surface',
-              )}
-            >
-              <button
-                type="button"
-                onClick={() => onAutoCompressUploadsChange(false)}
-                className={getBinaryToggleClassName(theme, !autoCompressUploads)}
-              >
-                {copy.shared.off}
-              </button>
-              <button
-                type="button"
-                onClick={() => onAutoCompressUploadsChange(true)}
-                className={getBinaryToggleClassName(theme, autoCompressUploads)}
-              >
-                {copy.shared.on}
-              </button>
-            </div>
-          </div>
-          <p className={cx(isClassic ? 'text-[11px] text-neutral-500 leading-relaxed' : 'text-[11px] leading-relaxed text-[var(--text-secondary)]')}>
-            {copy.autoCompressDescription(singleFileLimit)}
-          </p>
         </div>
 
         <div className="pt-6 space-y-3">
@@ -331,17 +271,6 @@ function getFormatButtonClassName(theme: VisualTheme, isActive: boolean): string
   }
 
   return 'py-2.5 text-[11px] font-semibold uppercase tracking-[0.14em] border border-transparent text-[var(--text-secondary)] transition-all duration-300 hover:border-[var(--panel-border)] hover:bg-[var(--panel-muted)] hover:text-[var(--text-primary)]';
-}
-
-function getBinaryToggleClassName(theme: VisualTheme, isActive: boolean): string {
-  if (theme === 'classic') {
-    return cx(
-      'px-3 py-1.5 rounded-xl text-[10px] font-bold uppercase tracking-widest transition-all duration-300',
-      isActive ? 'bg-neutral-900 text-white shadow-[0_2px_8px_rgba(0,0,0,0.06)]' : 'text-neutral-400 hover:text-neutral-700',
-    );
-  }
-
-  return cx('toggle-button', isActive && 'toggle-button--active');
 }
 
 function getQualityValueClassName(theme: VisualTheme): string {

@@ -99,7 +99,9 @@ export function getUniqueName(fileName: string, usedNames: Set<string>): string 
 }
 
 interface CreateQueuedFileOptions {
+  errorDetail?: string;
   originalBytes?: number;
+  status?: QueuedFile['status'];
 }
 
 export function createQueuedFile(file: File, options: CreateQueuedFileOptions = {}): QueuedFile {
@@ -113,10 +115,11 @@ export function createQueuedFile(file: File, options: CreateQueuedFileOptions = 
     file,
     name: file.name,
     bytes: file.size,
+    errorDetail: options.errorDetail,
     size: formatSize(file.size),
     compression,
-    status: 'uploading',
-    uploadProgress: 0,
+    status: options.status ?? 'uploading',
+    uploadProgress: options.status === 'failed' ? undefined : 0,
   };
 }
 

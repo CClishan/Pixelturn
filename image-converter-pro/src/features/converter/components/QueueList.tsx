@@ -135,6 +135,7 @@ export function QueueList({
                     </span>
                   </div>
                   {file.compression ? <CompressionSummary copy={copy} file={file} theme={theme} /> : null}
+                  {file.errorDetail ? <FailureSummary file={file} theme={theme} /> : null}
                   {file.status === 'uploading' ? <UploadProgress copy={copy} file={file} theme={theme} /> : null}
                 </div>
                 <div className="flex items-center gap-4 pt-1">
@@ -215,6 +216,28 @@ function CompressionSummary({ copy, file, theme }: CompressionSummaryProps): Rea
       )}
     >
       {copy.compressedSizeComparison(formatSize(file.compression.originalBytes), file.size)}
+    </p>
+  );
+}
+
+interface FailureSummaryProps {
+  file: QueuedFile;
+  theme: VisualTheme;
+}
+
+function FailureSummary({ file, theme }: FailureSummaryProps): ReactElement | null {
+  if (!file.errorDetail) {
+    return null;
+  }
+
+  return (
+    <p
+      className={cx(
+        'mt-1 text-[10px] leading-relaxed',
+        theme === 'classic' ? 'text-red-500' : 'text-[var(--error)]',
+      )}
+    >
+      {file.errorDetail}
     </p>
   );
 }

@@ -3,6 +3,7 @@ export type QueueStatus = 'uploading' | 'pending' | 'converting' | 'completed' |
 export interface QueuedFile {
   id: string;
   file: File;
+  errorDetail?: string;
   thumbnail?: string;
   name: string;
   bytes: number;
