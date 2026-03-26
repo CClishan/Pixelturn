@@ -42,6 +42,12 @@ export interface ConverterCopy {
     convertedSuccess: (count: number) => string;
     convertedSomeFailed: (count: number, failedFiles: string[]) => string;
     rejectedOversize: (limit: string, rejectedFiles: string[]) => string;
+    rejectedOversizeDetailed: (limit: string, rejectedFiles: string[]) => string;
+  };
+  compressionFailures: {
+    cannotFit: (limit: string) => string;
+    browserLimit: string;
+    unsupportedImage: string;
   };
   apiErrors: {
     failedToFetch: string;
@@ -104,6 +110,13 @@ export const converterCopy: Record<Language, ConverterCopy> = {
         `Converted ${count} file(s), but some failed: ${failedFiles.join(' | ')}`,
       rejectedOversize: (limit, rejectedFiles) =>
         `Skipped ${rejectedFiles.join(' | ')} because each image must stay within ${limit} for this deployment.`,
+      rejectedOversizeDetailed: (limit, rejectedFiles) =>
+        `Skipped some uploads for the ${limit} single-image cap: ${rejectedFiles.join(' | ')}`,
+    },
+    compressionFailures: {
+      cannotFit: (limit) => `could not compress enough to fit within ${limit}`,
+      browserLimit: 'browser could not decode or recompress this image',
+      unsupportedImage: 'browser could not process this image type',
     },
     apiErrors: {
       failedToFetch:
@@ -164,6 +177,13 @@ export const converterCopy: Record<Language, ConverterCopy> = {
         `已完成 ${count} 个文件转换，但部分文件失败：${failedFiles.join(' | ')}`,
       rejectedOversize: (limit, rejectedFiles) =>
         `已跳过 ${rejectedFiles.join(' | ')}，当前部署要求单张图片不超过 ${limit}。`,
+      rejectedOversizeDetailed: (limit, rejectedFiles) =>
+        `有部分文件因 ${limit} 单图限制被跳过：${rejectedFiles.join(' | ')}`,
+    },
+    compressionFailures: {
+      cannotFit: (limit) => `压缩后仍无法降到 ${limit} 以内`,
+      browserLimit: '浏览器无法解码或重新压缩这张图片',
+      unsupportedImage: '浏览器暂不支持处理该图片类型',
     },
     apiErrors: {
       failedToFetch: '请求在服务器响应前失败，请检查后端部署、API 地址是否填写为站点根地址（不要带 /api 路径）、CORS 配置，以及是否触发了部署平台的上传大小限制。',

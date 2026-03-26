@@ -1,26 +1,32 @@
 const qualitySteps = [0.9, 0.82, 0.74, 0.66, 0.58, 0.5, 0.42];
 const scaleSteps = [1, 0.92, 0.84, 0.76, 0.68, 0.6, 0.52, 0.44];
 
-export async function compressImageToFit(file: File, maxBytes: number): Promise<File | null> {
+export type CompressionFailureReason = 'unsupported_image' | 'browser_limit' | 'cannot_fit';
+
+export type CompressionResult =
+  | { ok: true; file: File }
+  | { ok: false; reason: CompressionFailureReason };
+
+export async function compressImageToFit(file: File, maxBytes: number): Promise<CompressionResult> {
   if (!file.type.startsWith('image/')) {
-    return null;
+    return { ok: false, reason: 'unsupported_image' };
   }
 
   const image = await loadImage(file).catch(() => null);
   if (!image) {
-    return null;
+    return { ok: false, reason: 'browser_limit' };
   }
 
   const originalWidth = image.naturalWidth || image.width;
   const originalHeight = image.naturalHeight || image.height;
   if (!originalWidth || !originalHeight) {
-    return null;
+    return { ok: false, reason: 'browser_limit' };
   }
 
   const canvas = document.createElement('canvas');
   const context = canvas.getContext('2d');
   if (!context) {
-    return null;
+    return { ok: false, reason: 'browser_limit' };
   }
 
   let bestBlob: Blob | null = null;
@@ -52,17 +58,17 @@ export async function compressImageToFit(file: File, maxBytes: number): Promise<
         }
 
         if (nextBlob.size <= maxBytes) {
-          return createFileFromBlob(file, nextBlob, mimeType);
+          return { ok: true, file: createFileFromBlob(file, nextBlob, mimeType) };
         }
       }
     }
   }
 
   if (!bestBlob || bestBlob.size > maxBytes) {
-    return null;
+    return { ok: false, reason: 'cannot_fit' };
   }
 
-  return createFileFromBlob(file, bestBlob, bestBlob.type || file.type);
+  return { ok: true, file: createFileFromBlob(file, bestBlob, bestBlob.type || file.type) };
 }
 
 function getMimeCandidates(originalMimeType: string): string[] {

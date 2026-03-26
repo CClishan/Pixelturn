@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 
 import { convertQueuedFile, getFriendlyErrorMessage } from '../api';
-import { compressImageToFit } from '../compression';
+import { compressImageToFit, type CompressionFailureReason } from '../compression';
 import { downloadBlob, downloadQueueAsZip } from '../download';
 import type { ConverterCopy } from '../copy';
 import type { OutputFormat } from '../constants';
@@ -172,6 +172,8 @@ export function useConverter({
   async function queueIncomingFiles(incomingFiles: File[]): Promise<void> {
     const queuedFiles: QueuedFile[] = [];
     const rejectedFiles: string[] = [];
+    const rejectedFilesWithReasons: string[] = [];
+    const limitLabel = formatLimit(singleFileLimitBytes);
 
     for (const file of incomingFiles) {
       if (file.size <= singleFileLimitBytes) {
@@ -184,25 +186,50 @@ export function useConverter({
         continue;
       }
 
-      const compressedFile = await compressImageToFit(file, singleFileLimitBytes);
-      if (!compressedFile || compressedFile.size > singleFileLimitBytes) {
-        rejectedFiles.push(file.name);
+      const compressedResult = await compressImageToFit(file, singleFileLimitBytes);
+      if (compressedResult.ok === false) {
+        rejectedFilesWithReasons.push(
+          `${file.name}: ${getCompressionFailureMessage(
+            compressedResult.reason,
+            copy,
+            limitLabel,
+          )}`,
+        );
+        continue;
+      }
+
+      if (compressedResult.file.size > singleFileLimitBytes) {
+        rejectedFilesWithReasons.push(
+          `${file.name}: ${getCompressionFailureMessage(
+            'cannot_fit',
+            copy,
+            limitLabel,
+          )}`,
+        );
         continue;
       }
 
       queuedFiles.push(
-        createQueuedFile(compressedFile, {
+        createQueuedFile(compressedResult.file, {
           originalBytes: file.size,
         }),
       );
     }
 
     setNotice(
-      rejectedFiles.length > 0
+      rejectedFilesWithReasons.length > 0 || rejectedFiles.length > 0
         ? {
             type: 'error',
             code: 'plain',
-            message: copy.notices.rejectedOversize(formatLimit(singleFileLimitBytes), rejectedFiles),
+            message:
+              rejectedFilesWithReasons.length > 0
+                ? copy.notices.rejectedOversizeDetailed(limitLabel, [
+                    ...rejectedFilesWithReasons,
+                    ...rejectedFiles.map(
+                      (fileName) => `${fileName}: ${copy.compressionFailures.cannotFit(limitLabel)}`,
+                    ),
+                  ])
+                : copy.notices.rejectedOversize(limitLabel, rejectedFiles),
           }
         : null,
     );
@@ -342,6 +369,22 @@ export function useConverter({
 
 function formatLimit(limitBytes: number): string {
   return `${Number((limitBytes / (1024 * 1024)).toFixed(2))} MB`;
+}
+
+function getCompressionFailureMessage(
+  reason: CompressionFailureReason,
+  copy: ConverterCopy,
+  limitLabel: string,
+): string {
+  if (reason === 'browser_limit') {
+    return copy.compressionFailures.browserLimit;
+  }
+
+  if (reason === 'unsupported_image') {
+    return copy.compressionFailures.unsupportedImage;
+  }
+
+  return copy.compressionFailures.cannotFit(limitLabel);
 }
 
 function getNoticeMessages(
