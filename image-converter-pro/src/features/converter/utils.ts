@@ -98,13 +98,23 @@ export function getUniqueName(fileName: string, usedNames: Set<string>): string 
   return candidate;
 }
 
-export function createQueuedFile(file: File): QueuedFile {
+interface CreateQueuedFileOptions {
+  originalBytes?: number;
+}
+
+export function createQueuedFile(file: File, options: CreateQueuedFileOptions = {}): QueuedFile {
+  const compression =
+    options.originalBytes && options.originalBytes > file.size
+      ? { originalBytes: options.originalBytes }
+      : undefined;
+
   return {
     id: Math.random().toString(36).substring(7),
     file,
     name: file.name,
     bytes: file.size,
     size: formatSize(file.size),
+    compression,
     status: 'uploading',
     uploadProgress: 0,
   };

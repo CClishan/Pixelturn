@@ -7,6 +7,9 @@ export interface QueuedFile {
   name: string;
   bytes: number;
   size: string;
+  compression?: {
+    originalBytes: number;
+  };
   status: QueueStatus;
   uploadProgress?: number;
   convertedBlob?: Blob;

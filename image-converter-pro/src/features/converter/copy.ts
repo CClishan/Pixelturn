@@ -18,6 +18,8 @@ export interface ConverterCopy {
   downloadZip: string;
   clearQueue: string;
   emptyQueue: string;
+  compressedBadge: string;
+  compressedSizeComparison: (originalSize: string, compressedSize: string) => string;
   queueItems: (count: number) => string;
   currentQueueSize: (size: string) => string;
   downloadFile: (fileName: string) => string;
@@ -75,6 +77,8 @@ export const converterCopy: Record<Language, ConverterCopy> = {
     downloadZip: 'Download ZIP',
     clearQueue: 'Clear Queue',
     emptyQueue: 'No images in queue',
+    compressedBadge: 'Auto-compressed',
+    compressedSizeComparison: (originalSize, compressedSize) => `${originalSize} -> ${compressedSize}`,
     queueItems: (count) => `${count} items`,
     currentQueueSize: (size) => `Current queue size: ${size}`,
     downloadFile: (fileName) => `Download ${fileName}`,
@@ -132,6 +136,8 @@ export const converterCopy: Record<Language, ConverterCopy> = {
     downloadZip: '打包下载',
     clearQueue: '清空队列',
     emptyQueue: '队列中还没有图片',
+    compressedBadge: '已自动压缩',
+    compressedSizeComparison: (originalSize, compressedSize) => `${originalSize} -> ${compressedSize}`,
     queueItems: (count) => `${count} 项`,
     currentQueueSize: (size) => `当前队列大小：${size}`,
     downloadFile: (fileName) => `下载 ${fileName}`,

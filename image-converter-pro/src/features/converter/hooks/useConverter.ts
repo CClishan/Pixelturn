@@ -170,12 +170,12 @@ export function useConverter({
   }
 
   async function queueIncomingFiles(incomingFiles: File[]): Promise<void> {
-    const preparedFiles: File[] = [];
+    const queuedFiles: QueuedFile[] = [];
     const rejectedFiles: string[] = [];
 
     for (const file of incomingFiles) {
       if (file.size <= singleFileLimitBytes) {
-        preparedFiles.push(file);
+        queuedFiles.push(createQueuedFile(file));
         continue;
       }
 
@@ -190,10 +190,12 @@ export function useConverter({
         continue;
       }
 
-      preparedFiles.push(compressedFile);
+      queuedFiles.push(
+        createQueuedFile(compressedFile, {
+          originalBytes: file.size,
+        }),
+      );
     }
-
-    const queuedFiles = preparedFiles.map(createQueuedFile);
 
     setNotice(
       rejectedFiles.length > 0

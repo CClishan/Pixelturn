@@ -13,7 +13,7 @@ import type { ReactElement } from 'react';
 import type { ConverterCopy } from '../copy';
 import { cx, type VisualTheme } from '../theme';
 import type { QueuedFile } from '../types';
-import { getFileTypeLabel } from '../utils';
+import { formatSize, getFileTypeLabel } from '../utils';
 
 interface QueueListProps {
   copy: ConverterCopy;
@@ -119,9 +119,12 @@ export function QueueList({
               >
                 <Thumbnail file={file} theme={theme} />
                 <div className="flex-1 min-w-0 pt-0.5">
-                  <p className={isClassic ? 'text-xs font-medium text-neutral-800 truncate mb-0.5' : 'text-xs font-semibold uppercase tracking-[0.08em] text-[var(--text-primary)] truncate mb-0.5'}>
-                    {file.name}
-                  </p>
+                  <div className="mb-0.5 flex items-center gap-2 min-w-0">
+                    <p className={isClassic ? 'min-w-0 text-xs font-medium text-neutral-800 truncate' : 'min-w-0 text-xs font-semibold uppercase tracking-[0.08em] text-[var(--text-primary)] truncate'}>
+                      {file.name}
+                    </p>
+                    {file.compression ? <CompressionBadge copy={copy} theme={theme} /> : null}
+                  </div>
                   <div className="flex items-center gap-1.5">
                     <span className={isClassic ? 'text-[9px] font-bold text-neutral-300 uppercase tracking-widest' : 'text-[9px] font-bold text-[var(--text-muted)] uppercase tracking-widest'}>
                       {file.size}
@@ -131,6 +134,7 @@ export function QueueList({
                       {getFileTypeLabel(file.file)}
                     </span>
                   </div>
+                  {file.compression ? <CompressionSummary copy={copy} file={file} theme={theme} /> : null}
                   {file.status === 'uploading' ? <UploadProgress copy={copy} file={file} theme={theme} /> : null}
                 </div>
                 <div className="flex items-center gap-4 pt-1">
@@ -157,6 +161,49 @@ export function QueueList({
         </AnimatePresence>
       </div>
     </div>
+  );
+}
+
+interface CompressionBadgeProps {
+  copy: ConverterCopy;
+  theme: VisualTheme;
+}
+
+function CompressionBadge({ copy, theme }: CompressionBadgeProps): ReactElement {
+  return (
+    <span
+      className={cx(
+        'shrink-0 rounded-full px-2 py-1 text-[8px] font-bold uppercase tracking-[0.16em]',
+        theme === 'classic'
+          ? 'border border-amber-200 bg-amber-50 text-amber-700'
+          : 'border border-[var(--panel-border)] bg-[var(--panel-muted)] text-[var(--text-primary)]',
+      )}
+    >
+      {copy.compressedBadge}
+    </span>
+  );
+}
+
+interface CompressionSummaryProps {
+  copy: ConverterCopy;
+  file: QueuedFile;
+  theme: VisualTheme;
+}
+
+function CompressionSummary({ copy, file, theme }: CompressionSummaryProps): ReactElement | null {
+  if (!file.compression) {
+    return null;
+  }
+
+  return (
+    <p
+      className={cx(
+        'mt-1 text-[10px] leading-relaxed',
+        theme === 'classic' ? 'text-neutral-400' : 'text-[var(--text-secondary)]',
+      )}
+    >
+      {copy.compressedSizeComparison(formatSize(file.compression.originalBytes), file.size)}
+    </p>
   );
 }
 
