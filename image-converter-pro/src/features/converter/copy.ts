@@ -19,6 +19,7 @@ export interface ConverterCopy {
   clearQueue: string;
   emptyQueue: string;
   compressedBadge: string;
+  compressedTooltip: string;
   compressedSizeComparison: (originalSize: string, compressedSize: string) => string;
   queueItems: (count: number) => string;
   currentQueueSize: (size: string) => string;
@@ -78,6 +79,7 @@ export const converterCopy: Record<Language, ConverterCopy> = {
     clearQueue: 'Clear Queue',
     emptyQueue: 'No images in queue',
     compressedBadge: 'Auto-compressed',
+    compressedTooltip: 'This upload was recompressed in the browser and may have changed file format or resolution.',
     compressedSizeComparison: (originalSize, compressedSize) => `${originalSize} -> ${compressedSize}`,
     queueItems: (count) => `${count} items`,
     currentQueueSize: (size) => `Current queue size: ${size}`,
@@ -137,6 +139,7 @@ export const converterCopy: Record<Language, ConverterCopy> = {
     clearQueue: '清空队列',
     emptyQueue: '队列中还没有图片',
     compressedBadge: '已自动压缩',
+    compressedTooltip: '该文件已在浏览器上传前重新压缩，格式或分辨率可能已经变化。',
     compressedSizeComparison: (originalSize, compressedSize) => `${originalSize} -> ${compressedSize}`,
     queueItems: (count) => `${count} 项`,
     currentQueueSize: (size) => `当前队列大小：${size}`,

@@ -171,15 +171,27 @@ interface CompressionBadgeProps {
 
 function CompressionBadge({ copy, theme }: CompressionBadgeProps): ReactElement {
   return (
-    <span
-      className={cx(
-        'shrink-0 rounded-full px-2 py-1 text-[8px] font-bold uppercase tracking-[0.16em]',
-        theme === 'classic'
-          ? 'border border-amber-200 bg-amber-50 text-amber-700'
-          : 'border border-[var(--panel-border)] bg-[var(--panel-muted)] text-[var(--text-primary)]',
-      )}
-    >
-      {copy.compressedBadge}
+    <span className="group relative inline-flex shrink-0 items-center">
+      <span
+        className={cx(
+          'rounded-full px-2 py-1 text-[8px] font-bold uppercase tracking-[0.16em]',
+          theme === 'classic'
+            ? 'border border-amber-200 bg-amber-50 text-amber-700'
+            : 'border border-[var(--panel-border)] bg-[var(--panel-muted)] text-[var(--text-primary)]',
+        )}
+      >
+        {copy.compressedBadge}
+      </span>
+      <span
+        className={cx(
+          'pointer-events-none absolute left-1/2 top-[calc(100%+8px)] z-10 w-52 -translate-x-1/2 translate-y-1 px-3 py-2 text-[10px] font-medium normal-case tracking-normal opacity-0 transition-all duration-200 ease-out group-hover:translate-y-0 group-hover:opacity-100',
+          theme === 'classic'
+            ? 'rounded-xl border border-neutral-200 bg-white text-neutral-500 shadow-[0_10px_30px_rgba(0,0,0,0.08)]'
+            : 'border border-[var(--panel-border)] bg-[var(--panel-muted)] text-[var(--text-secondary)] shadow-[var(--surface-shadow)]',
+        )}
+      >
+        {copy.compressedTooltip}
+      </span>
     </span>
   );
 }
